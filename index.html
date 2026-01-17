@@ -275,6 +275,12 @@ input:checked + .slider:before{transform:translateX(22px)}
     font-size:11px;
     color:#999;
 }
+.history-empty{
+    text-align:center;
+    padding:20px;
+    color:#999;
+    font-size:13px;
+}
 .history-list::-webkit-scrollbar{
     width:6px;
 }
@@ -425,9 +431,7 @@ function updateAmount(id, val){
 
 function evaluateExpression(expr){
     try{
-        // Remove spaces and replace x or X with *
         expr = expr.replace(/\s/g, '').replace(/x|X/gi, '*');
-        // Safely evaluate the expression
         const result = Function('"use strict"; return (' + expr + ')')();
         return isFinite(result) ? result : 0;
     }catch(e){
@@ -439,14 +443,12 @@ function addToHistory(fieldId, expression, result){
     if(!calculationHistory[fieldId]){
         calculationHistory[fieldId] = [];
     }
-    // Only add if it's actually a calculation (contains operators)
     if(/[\+\-\*\/xX\(\)]/.test(expression)){
         calculationHistory[fieldId].unshift({
             expr: expression,
             result: result,
             time: new Date().toLocaleTimeString()
         });
-        // Keep only last 20
         if(calculationHistory[fieldId].length > 20){
             calculationHistory[fieldId].pop();
         }
@@ -457,7 +459,6 @@ function showHistory(fieldId, inputElement){
     hideAllHistories();
     
     const history = calculationHistory[fieldId] || [];
-    if(history.length === 0) return;
     
     const rect = inputElement.getBoundingClientRect();
     const popup = document.createElement('div');
@@ -466,14 +467,21 @@ function showHistory(fieldId, inputElement){
     popup.style.top = (rect.bottom + window.scrollY + 5) + 'px';
     popup.style.left = (rect.left + window.scrollX) + 'px';
     
-    let html = '<div class="history-header">Calculation History</div><div class="history-list">';
-    history.forEach((item, idx) => {
-        html += `<div class="history-item">
-            <div class="history-expr">${item.expr} = ${item.result}</div>
-            <div class="history-time">${item.time}</div>
-        </div>`;
-    });
-    html += '</div>';
+    let html = '<div class="history-header">Calculation History</div>';
+    
+    if(history.length === 0){
+        html += '<div class="history-empty">No calculations yet.<br>Type an expression and press Enter.</div>';
+    } else {
+        html += '<div class="history-list">';
+        history.forEach((item, idx) => {
+            html += `<div class="history-item">
+                <div class="history-expr">${item.expr} = ${item.result}</div>
+                <div class="history-time">${item.time}</div>
+            </div>`;
+        });
+        html += '</div>';
+    }
+    
     popup.innerHTML = html;
     
     document.body.appendChild(popup);
@@ -573,6 +581,7 @@ function calculate(){
         return;
     }
 
+    // Calculate sum of all item amounts
     const totalOriginal=items.reduce((s,m)=>s+m.amount,0);
     const out=document.getElementById('outputRows');
     out.innerHTML='';
@@ -589,17 +598,24 @@ function calculate(){
 
     items.forEach(m=>{
         if(!m.amount) return;
-        const prop=(m.amount/totalBill)*100;
-        const prorated=(m.amount/totalBill)*after;
-        const discount=m.amount-prorated;
-        sumProrated+=prorated;
-        sumDiscount+=discount;
+        
+        // Calculate proportion based on item amount / total of all items
+        const proportion = (m.amount / totalOriginal) * 100;
+        
+        // Calculate prorated amount: (item's proportion) * (discounted bill)
+        const prorated = (m.amount / totalOriginal) * after;
+        
+        // Calculate discount
+        const discount = m.amount - prorated;
+        
+        sumProrated += prorated;
+        sumDiscount += discount;
 
         const tr=document.createElement('tr');
         tr.innerHTML=`
         <td>${m.name||'Unnamed'}</td>
         <td class="number">₹${m.amount.toFixed(3)}</td>
-        <td class="number">${prop.toFixed(3)}%</td>
+        <td class="number">${proportion.toFixed(3)}%</td>
         <td class="number">₹${prorated.toFixed(decimals)}</td>
         <td class="number ${discount/m.amount>0.5?'high-discount':''}">₹${discount.toFixed(decimals)}</td>`;
         out.appendChild(tr);
@@ -620,6 +636,7 @@ function resetAll(){
     decimalSelector.classList.remove('active');
     decimalSelector.value='2';
     decimalPlaces=2;
+    calculationHistory={};
     renderTable();
 }
 
