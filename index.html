@@ -72,6 +72,13 @@ th{
     text-align:left;
     border-bottom:3px solid #5568d3;
 }
+th:nth-child(2),
+th:nth-child(3),
+th:nth-child(4),
+th:nth-child(5),
+th:nth-child(6){
+    text-align:right;
+}
 th:first-child{border-radius:12px 0 0 0}
 th:last-child{border-radius:0 12px 0 0}
 td{
@@ -487,7 +494,7 @@ input:checked + .slider:before{
 </tbody>
 <tfoot>
 <tr class="totals-row">
-<td>TOTAL</td>
+<td style="text-align:left">TOTAL</td>
 <td id="tOriginal" class="number">₹0.000</td>
 <td class="number">100%</td>
 <td id="tDiscountRate" class="number">0%</td>
@@ -727,7 +734,7 @@ function calculate(){
 
         const tr=document.createElement('tr');
         tr.innerHTML=`
-        <td>${m.name||'Unnamed'}</td>
+        <td style="text-align:left">${m.name||'Unnamed'}</td>
         <td class="number">₹${m.amount.toFixed(decimals)}</td>
         <td class="number">${percentOfBill.toFixed(2)}%</td>
         <td class="number">${discountRate.toFixed(2)}%</td>
