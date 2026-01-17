@@ -258,7 +258,6 @@ input:checked + .slider:before{transform:translateX(22px)}
     padding:8px 10px;
     border-bottom:1px solid #eee;
     font-size:13px;
-    cursor:pointer;
 }
 .history-item:last-child{
     border-bottom:none;
@@ -333,7 +332,7 @@ input:checked + .slider:before{transform:translateX(22px)}
 <label for="totalBill">Total Bill Amount (₹):</label>
 <div style="position:relative">
 <input type="text" id="totalBill" value="" placeholder="Enter amount or expression (e.g., 45-34)" style="padding-right:35px">
-<button class="history-btn" data-field="totalBill" title="View calculation history">ⓘ</button>
+<button class="history-btn" data-field="totalBill" title="View calculation history" style="position:absolute;right:8px;top:50%;transform:translateY(-50%)">ⓘ</button>
 </div>
 </div>
 
@@ -341,7 +340,7 @@ input:checked + .slider:before{transform:translateX(22px)}
 <label for="afterDiscount">Total Bill After Discount (₹):</label>
 <div style="position:relative">
 <input type="text" id="afterDiscount" value="" placeholder="Enter amount or expression (e.g., 100x0.8)" style="padding-right:35px">
-<button class="history-btn" data-field="afterDiscount" title="View calculation history">ⓘ</button>
+<button class="history-btn" data-field="afterDiscount" title="View calculation history" style="position:absolute;right:8px;top:50%;transform:translateY(-50%)">ⓘ</button>
 </div>
 </div>
 
@@ -380,10 +379,10 @@ input:checked + .slider:before{transform:translateX(22px)}
 <tfoot>
 <tr class="totals-row">
 <td>TOTAL</td>
-<td id="tOriginal" class="number">₹0.00</td>
+<td id="tOriginal" class="number">₹0.000</td>
 <td class="number">100%</td>
-<td id="tProrated" class="number">₹0.00</td>
-<td id="tDiscount" class="number">₹0.00</td>
+<td id="tProrated" class="number">₹0.000</td>
+<td id="tDiscount" class="number">₹0.000</td>
 </tr>
 </tfoot>
 </table>
@@ -397,22 +396,9 @@ let useCustomDecimals=false;
 let decimalPlaces=2;
 let calculationHistory={};
 
-const totalBillInput=document.getElementById('totalBill');
-const afterDiscountInput=document.getElementById('afterDiscount');
-const decimalToggle=document.getElementById('decimalToggle');
-const decimalSelector=document.getElementById('decimalSelector');
-const tOriginal=document.getElementById('tOriginal');
-const tProrated=document.getElementById('tProrated');
-const tDiscount=document.getElementById('tDiscount');
-
 function addItem(){
-    const newItem = {id: nextId++, name:'', amount:0};
-    items.push(newItem);
+    items.push({id:nextId++,name:'',amount:0});
     renderTable();
-    setTimeout(()=>{
-        const input = document.querySelector(`.name-input[data-id="${newItem.id}"]`);
-        if(input) input.focus();
-    },50);
 }
 
 function removeItem(id){
@@ -424,22 +410,12 @@ function removeItem(id){
     renderTable();
 }
 
-function resetAll(){
-    if(confirm('Are you sure you want to reset all data?')){
-        items=[{id: nextId++, name:'', amount:0}];
-        totalBillInput.value='';
-        afterDiscountInput.value='';
-        calculationHistory={};
-        renderTable();
-    }
-}
-
-function updateName(id,val){
+function updateName(id, val){
     const m=items.find(x=>x.id===id);
     if(m) m.name=val;
 }
 
-function updateAmount(id,val){
+function updateAmount(id, val){
     const m=items.find(x=>x.id===id);
     if(m){
         m.amount=parseFloat(val)||0;
@@ -449,66 +425,62 @@ function updateAmount(id,val){
 
 function evaluateExpression(expr){
     try{
-        expr = expr.replace(/\s/g,'').replace(/x|X/gi,'*');
-        const result = Function('"use strict"; return ('+expr+')')();
-        return isFinite(result) && result >= 0 ? result : null;
-    }catch(e){return null;}
-}
-
-function addToHistory(fieldId, expression, result){
-    if(!calculationHistory[fieldId]) calculationHistory[fieldId]=[];
-    if(/[\+\-\*\/xX\(\)]/.test(expression)){
-        calculationHistory[fieldId].unshift({
-            expr: expression,
-            result: result.toFixed(2),
-            time: new Date().toLocaleTimeString()
-        });
-        if(calculationHistory[fieldId].length>20) calculationHistory[fieldId].pop();
+        // Remove spaces and replace x or X with *
+        expr = expr.replace(/\s/g, '').replace(/x|X/gi, '*');
+        // Safely evaluate the expression
+        const result = Function('"use strict"; return (' + expr + ')')();
+        return isFinite(result) ? result : 0;
+    }catch(e){
+        return null;
     }
 }
 
-function showHistory(fieldId,inputElement){
+function addToHistory(fieldId, expression, result){
+    if(!calculationHistory[fieldId]){
+        calculationHistory[fieldId] = [];
+    }
+    // Only add if it's actually a calculation (contains operators)
+    if(/[\+\-\*\/xX\(\)]/.test(expression)){
+        calculationHistory[fieldId].unshift({
+            expr: expression,
+            result: result,
+            time: new Date().toLocaleTimeString()
+        });
+        // Keep only last 20
+        if(calculationHistory[fieldId].length > 20){
+            calculationHistory[fieldId].pop();
+        }
+    }
+}
+
+function showHistory(fieldId, inputElement){
     hideAllHistories();
+    
     const history = calculationHistory[fieldId] || [];
-    if(history.length===0) return;
-
+    if(history.length === 0) return;
+    
     const rect = inputElement.getBoundingClientRect();
-    const popup=document.createElement('div');
-    popup.className='history-popup';
-    popup.id='active-history';
-    popup.style.top=(rect.bottom + window.scrollY + 5)+'px';
-    popup.style.left=(rect.left + window.scrollX)+'px';
-
-    let html='<div class="history-header">Calculation History (Click to use)</div><div class="history-list">';
-    history.forEach((item, idx)=>{
-        html+=`<div class="history-item" data-field="${fieldId}" data-idx="${idx}">
+    const popup = document.createElement('div');
+    popup.className = 'history-popup';
+    popup.id = 'active-history';
+    popup.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+    popup.style.left = (rect.left + window.scrollX) + 'px';
+    
+    let html = '<div class="history-header">Calculation History</div><div class="history-list">';
+    history.forEach((item, idx) => {
+        html += `<div class="history-item">
             <div class="history-expr">${item.expr} = ${item.result}</div>
             <div class="history-time">${item.time}</div>
         </div>`;
     });
-    html+='</div>';
-    popup.innerHTML=html;
+    html += '</div>';
+    popup.innerHTML = html;
+    
     document.body.appendChild(popup);
-
-    popup.querySelectorAll('.history-item').forEach(item=>{
-        item.addEventListener('click',(e)=>{
-            const idx = parseInt(e.currentTarget.dataset.idx);
-            const histItem = calculationHistory[fieldId][idx];
-            inputElement.value = histItem.result;
-            
-            if(fieldId === 'totalBill' || fieldId === 'afterDiscount'){
-                inputElement.dispatchEvent(new Event('input'));
-            }else{
-                const itemId = fieldId.split('-')[1];
-                updateAmount(parseInt(itemId), histItem.result);
-            }
-            hideAllHistories();
-        });
-    });
 }
 
 function hideAllHistories(){
-    const existing=document.getElementById('active-history');
+    const existing = document.getElementById('active-history');
     if(existing) existing.remove();
 }
 
@@ -517,11 +489,12 @@ function renderTable(){
     const focusedId=document.activeElement?.dataset?.id;
     const focusedType=document.activeElement?.className;
     const cursorPos=document.activeElement?.selectionStart;
-
+    
     tbody.innerHTML='';
-
+    
     items.forEach(m=>{
         const tr=document.createElement('tr');
+        
         tr.innerHTML=`
         <td>
             <input type="text" value="${m.name}" data-id="${m.id}" class="name-input"
@@ -537,57 +510,57 @@ function renderTable(){
         </td>`;
         tbody.appendChild(tr);
     });
-
+    
     tbody.querySelectorAll('.name-input').forEach(input=>{
-        input.addEventListener('input',(e)=>{
-            updateName(parseInt(e.target.dataset.id),e.target.value);
+        input.addEventListener('input', (e)=>{
+            updateName(parseInt(e.target.dataset.id), e.target.value);
         });
     });
-
+    
     tbody.querySelectorAll('.amount-input').forEach(input=>{
-        input.addEventListener('input',(e)=>{
-            updateAmount(parseInt(e.target.dataset.id),e.target.value);
+        input.addEventListener('input', (e)=>{
+            updateAmount(parseInt(e.target.dataset.id), e.target.value);
         });
-        input.addEventListener('keydown',(e)=>{
-            if(e.key==='Enter'){
+        input.addEventListener('keydown', (e)=>{
+            if(e.key === 'Enter'){
                 e.preventDefault();
                 const expr = e.target.value;
                 const result = evaluateExpression(expr);
-                if(result!==null){
-                    const fieldId='item-'+e.target.dataset.id;
-                    addToHistory(fieldId,expr,result);
-                    e.target.value=result;
-                    updateAmount(parseInt(e.target.dataset.id),result.toString());
+                if(result !== null){
+                    const fieldId = 'item-' + e.target.dataset.id;
+                    addToHistory(fieldId, expr, result);
+                    e.target.value = result;
+                    updateAmount(parseInt(e.target.dataset.id), result.toString());
                 }
             }
         });
     });
-
+    
     tbody.querySelectorAll('.history-btn').forEach(btn=>{
-        btn.addEventListener('click',(e)=>{
+        btn.addEventListener('click', (e)=>{
             e.stopPropagation();
-            const fieldId=btn.dataset.field;
-            const input = tbody.querySelector(`.amount-input[data-id="${fieldId.split('-')[1]}"]`);
-            showHistory(fieldId,input);
+            const fieldId = e.target.dataset.field;
+            const input = tbody.querySelector(`[data-id="${fieldId.split('-')[1]}"].amount-input`);
+            showHistory(fieldId, input);
         });
     });
-
+    
     tbody.querySelectorAll('.btn-remove').forEach(btn=>{
-        btn.addEventListener('click',(e)=>{
+        btn.addEventListener('click', (e)=>{
             removeItem(parseInt(e.target.dataset.id));
         });
     });
-
+    
     if(focusedId){
         const elementToFocus=tbody.querySelector(`[data-id="${focusedId}"].${focusedType}`);
         if(elementToFocus){
             elementToFocus.focus();
             if(cursorPos!==undefined && elementToFocus.setSelectionRange){
-                elementToFocus.setSelectionRange(cursorPos,cursorPos);
+                elementToFocus.setSelectionRange(cursorPos, cursorPos);
             }
         }
     }
-
+    
     calculate();
 }
 
@@ -606,91 +579,112 @@ function calculate(){
 
     if(!totalOriginal || totalBill===0){
         out.innerHTML='<tr><td colspan="5" class="empty-state">Add items and amounts to see calculations</td></tr>';
-        tOriginal.textContent=tProrated.textContent=tDiscount.textContent='₹0.00';
+        tOriginal.textContent=tProrated.textContent=tDiscount.textContent='₹0.000';
         return;
     }
 
-    const decimals=useCustomDecimals?decimalPlaces:2;
-    let sumProrated=0,sumDiscount=0;
+    const decimals=useCustomDecimals?decimalPlaces:3;
+    
+    let sumProrated=0, sumDiscount=0;
 
     items.forEach(m=>{
         if(!m.amount) return;
-        const prop=(m.amount/totalOriginal)*100;
-        const prorated=(m.amount/totalOriginal)*after;
+        const prop=(m.amount/totalBill)*100;
+        const prorated=(m.amount/totalBill)*after;
         const discount=m.amount-prorated;
         sumProrated+=prorated;
         sumDiscount+=discount;
 
         const tr=document.createElement('tr');
-        const discountPct = (discount/m.amount)*100;
-        const rowClass = discountPct > 50 ? ' class="high-discount"' : '';
-        
         tr.innerHTML=`
-        <td${rowClass}>${m.name||'Unnamed'}</td>
-        <td${rowClass} class="number">₹${m.amount.toFixed(2)}</td>
-        <td${rowClass} class="number">${prop.toFixed(2)}%</td>
-        <td${rowClass} class="number">₹${prorated.toFixed(decimals)}</td>
-        <td${rowClass} class="number">₹${discount.toFixed(decimals)}</td>`;
+        <td>${m.name||'Unnamed'}</td>
+        <td class="number">₹${m.amount.toFixed(3)}</td>
+        <td class="number">${prop.toFixed(3)}%</td>
+        <td class="number">₹${prorated.toFixed(decimals)}</td>
+        <td class="number ${discount/m.amount>0.5?'high-discount':''}">₹${discount.toFixed(decimals)}</td>`;
         out.appendChild(tr);
     });
 
-    tOriginal.textContent='₹'+totalOriginal.toFixed(2);
+    tOriginal.textContent='₹'+totalOriginal.toFixed(3);
     tProrated.textContent='₹'+sumProrated.toFixed(decimals);
     tDiscount.textContent='₹'+sumDiscount.toFixed(decimals);
 }
 
-decimalToggle.addEventListener('change',(e)=>{
-    useCustomDecimals=e.target.checked;
-    if(useCustomDecimals){
-        decimalSelector.classList.add('active');
-    }else{
-        decimalSelector.classList.remove('active');
-    }
-    calculate();
-});
+function resetAll(){
+    items=[{id:1,name:'',amount:0}];
+    nextId=2;
+    totalBillInput.value='';
+    afterDiscountInput.value='';
+    decimalToggle.checked=false;
+    useCustomDecimals=false;
+    decimalSelector.classList.remove('active');
+    decimalSelector.value='2';
+    decimalPlaces=2;
+    renderTable();
+}
 
-decimalSelector.addEventListener('change',(e)=>{
-    decimalPlaces=parseInt(e.target.value);
-    calculate();
-});
+const totalBillInput=document.getElementById('totalBill');
+const afterDiscountInput=document.getElementById('afterDiscount');
+const decimalToggle=document.getElementById('decimalToggle');
+const decimalSelector=document.getElementById('decimalSelector');
 
-totalBillInput.addEventListener('input',calculate);
-afterDiscountInput.addEventListener('input',calculate);
+totalBillInput.addEventListener('input', calculate);
+afterDiscountInput.addEventListener('input', calculate);
 
-[totalBillInput, afterDiscountInput].forEach(input=>{
-    input.addEventListener('keydown',(e)=>{
-        if(e.key==='Enter'){
-            e.preventDefault();
-            const expr = e.target.value;
-            const result = evaluateExpression(expr);
-            if(result!==null){
-                const fieldId = e.target.id;
-                addToHistory(fieldId, expr, result);
-                e.target.value = result;
-                calculate();
-            }
+totalBillInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+        e.preventDefault();
+        const expr = e.target.value;
+        const result = evaluateExpression(expr);
+        if(result !== null){
+            addToHistory('totalBill', expr, result);
+            e.target.value = result;
+            calculate();
         }
-    });
+    }
+});
+
+afterDiscountInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter'){
+        e.preventDefault();
+        const expr = e.target.value;
+        const result = evaluateExpression(expr);
+        if(result !== null){
+            addToHistory('afterDiscount', expr, result);
+            e.target.value = result;
+            calculate();
+        }
+    }
 });
 
 document.querySelectorAll('.history-btn').forEach(btn=>{
-    if(btn.dataset.field === 'totalBill' || btn.dataset.field === 'afterDiscount'){
-        btn.addEventListener('click',(e)=>{
-            e.stopPropagation();
-            const fieldId = btn.dataset.field;
-            const input = document.getElementById(fieldId);
-            showHistory(fieldId, input);
-        });
-    }
+    btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const fieldId = e.target.dataset.field;
+        const input = document.getElementById(fieldId);
+        showHistory(fieldId, input);
+    });
 });
 
-document.addEventListener('click',(e)=>{
+document.addEventListener('click', (e)=>{
     if(!e.target.closest('.history-popup') && !e.target.closest('.history-btn')){
         hideAllHistories();
     }
 });
 
-items.push({id: nextId++, name:'', amount:0});
+decimalToggle.addEventListener('change', (e)=>{
+    useCustomDecimals=e.target.checked;
+    decimalSelector.classList.toggle('active', useCustomDecimals);
+    calculate();
+});
+
+decimalSelector.addEventListener('change', (e)=>{
+    decimalPlaces=parseInt(e.target.value);
+    calculate();
+});
+
+items=[{id:1,name:'',amount:0}];
+nextId=2;
 renderTable();
 </script>
 
