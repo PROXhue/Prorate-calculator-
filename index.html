@@ -49,13 +49,13 @@ h1{
 table{
     width:100%;
     border-collapse:collapse;
-    min-width:650px;
+    min-width:750px;
 }
 th{
     background:#667eea;
     color:#fff;
     padding:12px 10px;
-    font-size:13px;
+    font-size:12px;
     white-space:nowrap;
     font-weight:600;
 }
@@ -137,7 +137,27 @@ input:focus{
     font-size:14px;
     padding:12px 10px;
 }
-.high-discount{background:#fff3cd}
+.info-box{
+    background:#e8f4f8;
+    border-left:4px solid #2196f3;
+    padding:16px;
+    margin-bottom:24px;
+    border-radius:6px;
+}
+.info-box-title{
+    font-weight:600;
+    font-size:14px;
+    color:#1976d2;
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.info-box-content{
+    font-size:13px;
+    color:#333;
+    line-height:1.6;
+}
 .toggle-container{
     display:flex;
     align-items:center;
@@ -303,8 +323,8 @@ input:checked + .slider:before{transform:translateX(22px)}
         align-items:flex-start;
         gap:12px;
     }
-    table{font-size:12px}
-    th,td{padding:8px}
+    table{font-size:11px}
+    th,td{padding:8px 6px}
 }
 </style>
 
@@ -350,6 +370,15 @@ input:checked + .slider:before{transform:translateX(22px)}
 </div>
 </div>
 
+<div class="info-box" id="calculationInfo" style="display:none">
+<div class="info-box-title">
+<span>💡</span>
+<span>Calculation Method:</span>
+</div>
+<div class="info-box-content" id="infoContent">
+</div>
+</div>
+
 <div class="section-header">
 <h2 class="section-title" style="margin-bottom:0;border:none;padding-bottom:0">Proration Result</h2>
 <div class="toggle-container">
@@ -374,19 +403,21 @@ input:checked + .slider:before{transform:translateX(22px)}
 <tr>
 <th>Item</th>
 <th>Original (₹)</th>
-<th>Proportion</th>
+<th>% of Bill</th>
+<th>Discount Rate</th>
 <th>Prorated (₹)</th>
 <th>Discount (₹)</th>
 </tr>
 </thead>
 <tbody id="outputRows">
-<tr><td colspan="5" class="empty-state">Add items to see calculations</td></tr>
+<tr><td colspan="6" class="empty-state">Add items to see calculations</td></tr>
 </tbody>
 <tfoot>
 <tr class="totals-row">
 <td>TOTAL</td>
 <td id="tOriginal" class="number">₹0.000</td>
 <td class="number">100%</td>
+<td id="tDiscountRate" class="number">0%</td>
 <td id="tProrated" class="number">₹0.000</td>
 <td id="tDiscount" class="number">₹0.000</td>
 </tr>
@@ -581,31 +612,36 @@ function calculate(){
         return;
     }
 
-    // Calculate sum of all item amounts
     const totalOriginal=items.reduce((s,m)=>s+m.amount,0);
     const out=document.getElementById('outputRows');
+    const infoBox=document.getElementById('calculationInfo');
+    const infoContent=document.getElementById('infoContent');
+    
     out.innerHTML='';
 
     if(!totalOriginal || totalBill===0){
-        out.innerHTML='<tr><td colspan="5" class="empty-state">Add items and amounts to see calculations</td></tr>';
+        out.innerHTML='<tr><td colspan="6" class="empty-state">Add items and amounts to see calculations</td></tr>';
         tOriginal.textContent=tProrated.textContent=tDiscount.textContent='₹0.000';
+        tDiscountRate.textContent='0%';
+        infoBox.style.display='none';
         return;
     }
 
-    const decimals=useCustomDecimals?decimalPlaces:3;
+    const decimals=useCustomDecimals?decimalPlaces:2;
+    const discountRate = ((totalBill - after) / totalBill) * 100;
+    const totalDiscountAmount = totalBill - after;
+    
+    // Show info box
+    infoBox.style.display='block';
+    infoContent.innerHTML = `Each item gets a <strong>${discountRate.toFixed(2)}%</strong> discount applied proportionally.<br>📊 <strong>Total Discount:</strong> ₹${totalDiscountAmount.toFixed(2)} (${discountRate.toFixed(2)}% of ₹${totalBill.toFixed(2)})`;
     
     let sumProrated=0, sumDiscount=0;
 
     items.forEach(m=>{
         if(!m.amount) return;
         
-        // Calculate proportion based on item amount / total of all items
-        const proportion = (m.amount / totalOriginal) * 100;
-        
-        // Calculate prorated amount: (item's proportion) * (discounted bill)
-        const prorated = (m.amount / totalOriginal) * after;
-        
-        // Calculate discount
+        const percentOfBill = (m.amount / totalBill) * 100;
+        const prorated = m.amount * (1 - (discountRate / 100));
         const discount = m.amount - prorated;
         
         sumProrated += prorated;
@@ -614,14 +650,16 @@ function calculate(){
         const tr=document.createElement('tr');
         tr.innerHTML=`
         <td>${m.name||'Unnamed'}</td>
-        <td class="number">₹${m.amount.toFixed(3)}</td>
-        <td class="number">${proportion.toFixed(3)}%</td>
+        <td class="number">₹${m.amount.toFixed(2)}</td>
+        <td class="number">${percentOfBill.toFixed(2)}%</td>
+        <td class="number">${discountRate.toFixed(2)}%</td>
         <td class="number">₹${prorated.toFixed(decimals)}</td>
-        <td class="number ${discount/m.amount>0.5?'high-discount':''}">₹${discount.toFixed(decimals)}</td>`;
+        <td class="number">₹${discount.toFixed(decimals)}</td>`;
         out.appendChild(tr);
     });
 
-    tOriginal.textContent='₹'+totalOriginal.toFixed(3);
+    tOriginal.textContent='₹'+totalBill.toFixed(2);
+    tDiscountRate.textContent=discountRate.toFixed(2)+'%';
     tProrated.textContent='₹'+sumProrated.toFixed(decimals);
     tDiscount.textContent='₹'+sumDiscount.toFixed(decimals);
 }
@@ -637,6 +675,7 @@ function resetAll(){
     decimalSelector.value='2';
     decimalPlaces=2;
     calculationHistory={};
+    document.getElementById('calculationInfo').style.display='none';
     renderTable();
 }
 
