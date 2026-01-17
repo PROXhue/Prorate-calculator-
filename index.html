@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prorate Calculator</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    min-height:100vh;
+    padding:20px;
+}
+.container{
+    max-width:1200px;
+    margin:auto;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 10px 40px rgba(0,0,0,.2);
+    padding:32px;
+}
+h1{
+    font-size:24px;
+    font-weight:600;
+    margin-bottom:32px;
+    color:#1a1a1a;
+}
+.section-title{
+    font-size:17px;
+    font-weight:600;
+    margin-bottom:16px;
+    border-bottom:2px solid #667eea;
+    padding-bottom:8px;
+    color:#1a1a1a;
+}
+.section-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+}
+.table-wrapper{
+    overflow-x:auto;
+    margin-bottom:20px;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:650px;
+}
+th{
+    background:#667eea;
+    color:#fff;
+    padding:12px 10px;
+    font-size:13px;
+    white-space:nowrap;
+    font-weight:600;
+}
+td{
+    padding:10px;
+    border-bottom:1px solid #ddd;
+    font-size:14px;
+}
+tbody tr:hover td{background:#f8f9ff}
+input{
+    width:100%;
+    padding:8px 10px;
+    border:2px solid #ddd;
+    border-radius:6px;
+    font-size:13px;
+    transition:border .2s;
+}
+input:focus{
+    border-color:#667eea;
+    outline:none;
+    box-shadow:0 0 0 3px rgba(102,126,234,0.1);
+}
+.btn{
+    padding:10px 16px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+    margin:0 8px 8px 0;
+    transition:transform .1s,box-shadow .2s;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+}
+.btn:hover{
+    transform:translateY(-1px);
+    box-shadow:0 4px 8px rgba(0,0,0,.15);
+}
+.btn:active{transform:translateY(0)}
+.btn-add{background:#4caf50;color:#fff}
+.btn-reset{background:#ff9800;color:#fff}
+.btn-remove{
+    background:#f44336;
+    color:#fff;
+    font-size:12px;
+    padding:6px 10px;
+}
+.input-group{
+    margin-bottom:20px;
+}
+.input-group label{
+    display:block;
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:6px;
+    color:#333;
+}
+.input-group input{
+    padding:10px 12px;
+    font-size:15px;
+}
+.number{
+    text-align:right;
+    font-family:monospace;
+    font-size:13px;
+}
+.empty-state{
+    text-align:center;
+    color:#999;
+    padding:24px;
+    font-size:13px;
+}
+.totals-row{
+    background:#f5f5f5;
+    font-weight:700;
+}
+.totals-row td{
+    font-size:14px;
+    padding:12px 10px;
+}
+.high-discount{background:#fff3cd}
+.toggle-container{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+.toggle-label{
+    font-size:13px;
+    color:#555;
+    font-weight:500;
+}
+.toggle-switch{
+    position:relative;
+    display:inline-block;
+    width:46px;
+    height:24px;
+}
+.toggle-switch input{
+    opacity:0;
+    width:0;
+    height:0;
+}
+.slider{
+    position:absolute;
+    cursor:pointer;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:#ccc;
+    transition:all .3s;
+    border-radius:24px;
+}
+.slider:before{
+    position:absolute;
+    content:"";
+    height:18px;
+    width:18px;
+    left:3px;
+    bottom:3px;
+    background:white;
+    transition:all .3s;
+    border-radius:50%;
+    box-shadow:0 2px 4px rgba(0,0,0,.2);
+}
+input:checked + .slider{background:#667eea}
+input:checked + .slider:before{transform:translateX(22px)}
+.decimal-selector{
+    padding:5px 10px;
+    border:2px solid #667eea;
+    border-radius:6px;
+    font-size:12px;
+    background:white;
+    cursor:pointer;
+    transition:all .3s;
+    opacity:0;
+    transform:scale(0.95);
+    pointer-events:none;
+}
+.decimal-selector.active{
+    opacity:1;
+    transform:scale(1);
+    pointer-events:all;
+}
+.decimal-selector:hover{background:#f0f4ff}
+.button-group{
+    display:flex;
+    gap:8px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+}
+@media (max-width: 768px){
+    .container{padding:20px}
+    h1{font-size:20px}
+    .section-header{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:12px;
+    }
+    table{font-size:12px}
+    th,td{padding:8px}
+}
+</style>
+
+</head>
+
+<body>
+<div class="container">
+<h1>Prorate Calculator</h1>
+
+<h2 class="section-title">List</h2>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Original Amount (₹)</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="itemRows"></tbody>
+</table>
+</div>
+
+<div class="button-group">
+<button class="btn btn-add" onclick="addItem()">➕ Add Item</button>
+<button class="btn btn-reset" onclick="resetAll()">🔄 Reset</button>
+</div>
+
+<div class="input-group">
+<label for="totalBill">Total Bill Amount (₹):</label>
+<input type="number" id="totalBill" step="0.001" value="" placeholder="Enter total bill amount">
+</div>
+
+<div class="input-group">
+<label for="afterDiscount">Total Bill After Discount (₹):</label>
+<input type="number" id="afterDiscount" step="0.001" value="" placeholder="Enter discounted amount">
+</div>
+
+<div class="section-header">
+<h2 class="section-title" style="margin-bottom:0;border:none;padding-bottom:0">Proration Result</h2>
+<div class="toggle-container">
+<span class="toggle-label">Custom Decimals</span>
+<label class="toggle-switch">
+<input type="checkbox" id="decimalToggle">
+<span class="slider"></span>
+</label>
+<select id="decimalSelector" class="decimal-selector">
+<option value="0">0 decimals</option>
+<option value="1">1 decimal</option>
+<option value="2" selected>2 decimals</option>
+<option value="3">3 decimals</option>
+<option value="4">4 decimals</option>
+</select>
+</div>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Original (₹)</th>
+<th>Proportion</th>
+<th>Prorated (₹)</th>
+<th>Discount (₹)</th>
+</tr>
+</thead>
+<tbody id="outputRows">
+<tr><td colspan="5" class="empty-state">Add items to see calculations</td></tr>
+</tbody>
+<tfoot>
+<tr class="totals-row">
+<td>TOTAL</td>
+<td id="tOriginal" class="number">₹0.000</td>
+<td class="number">100%</td>
+<td id="tProrated" class="number">₹0.000</td>
+<td id="tDiscount" class="number">₹0.000</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+
+<script>
+let items=[];
+let nextId=1;
+let useCustomDecimals=false;
+let decimalPlaces=2;
+
+function addItem(){
+    items.push({id:nextId++,name:'',amount:0});
+    renderTable();
+}
+
+function removeItem(id){
+    if(items.length===1){
+        alert('At least one item required');
+        return;
+    }
+    items=items.filter(m=>m.id!==id);
+    renderTable();
+}
+
+function updateName(id, val){
+    const m=items.find(x=>x.id===id);
+    if(m) m.name=val;
+}
+
+function updateAmount(id, val){
+    const m=items.find(x=>x.id===id);
+    if(m){
+        m.amount=parseFloat(val)||0;
+        calculate();
+    }
+}
+
+function renderTable(){
+    const tbody=document.getElementById('itemRows');
+    const focusedId=document.activeElement?.dataset?.id;
+    const focusedType=document.activeElement?.className;
+    const cursorPos=document.activeElement?.selectionStart;
+    
+    tbody.innerHTML='';
+    
+    items.forEach(m=>{
+        const tr=document.createElement('tr');
+        
+        tr.innerHTML=`
+        <td>
+            <input type="text" value="${m.name}" data-id="${m.id}" class="name-input"
+                placeholder="Enter name">
+        </td>
+        <td>
+            <input type="number" step="0.001" value="${m.amount||''}" data-id="${m.id}" class="amount-input"
+                placeholder="0.000">
+        </td>
+        <td>
+            <button class="btn btn-remove" data-id="${m.id}">✕</button>
+        </td>`;
+        tbody.appendChild(tr);
+    });
+    
+    tbody.querySelectorAll('.name-input').forEach(input=>{
+        input.addEventListener('input', (e)=>{
+            updateName(parseInt(e.target.dataset.id), e.target.value);
+        });
+    });
+    
+    tbody.querySelectorAll('.amount-input').forEach(input=>{
+        input.addEventListener('input', (e)=>{
+            updateAmount(parseInt(e.target.dataset.id), e.target.value);
+        });
+    });
+    
+    tbody.querySelectorAll('.btn-remove').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+            removeItem(parseInt(e.target.dataset.id));
+        });
+    });
+    
+    if(focusedId){
+        const elementToFocus=tbody.querySelector(`[data-id="${focusedId}"].${focusedType}`);
+        if(elementToFocus){
+            elementToFocus.focus();
+            if(cursorPos!==undefined && elementToFocus.setSelectionRange){
+                elementToFocus.setSelectionRange(cursorPos, cursorPos);
+            }
+        }
+    }
+    
+    calculate();
+}
+
+function calculate(){
+    const totalBill=parseFloat(totalBillInput.value)||0;
+    const after=parseFloat(afterDiscountInput.value)||0;
+
+    if(after>totalBill && totalBill>0){
+        afterDiscountInput.value=totalBill;
+        return;
+    }
+
+    const totalOriginal=items.reduce((s,m)=>s+m.amount,0);
+    const out=document.getElementById('outputRows');
+    out.innerHTML='';
+
+    if(!totalOriginal || totalBill===0){
+        out.innerHTML='<tr><td colspan="5" class="empty-state">Add items and amounts to see calculations</td></tr>';
+        tOriginal.textContent=tProrated.textContent=tDiscount.textContent='₹0.000';
+        return;
+    }
+
+    const decimals=useCustomDecimals?decimalPlaces:3;
+    
+    let sumProrated=0, sumDiscount=0;
+
+    items.forEach(m=>{
+        if(!m.amount) return;
+        const prop=(m.amount/totalBill)*100;
+        const prorated=(m.amount/totalBill)*after;
+        const discount=m.amount-prorated;
+        sumProrated+=prorated;
+        sumDiscount+=discount;
+
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+        <td>${m.name||'Unnamed'}</td>
+        <td class="number">₹${m.amount.toFixed(3)}</td>
+        <td class="number">${prop.toFixed(3)}%</td>
+        <td class="number">₹${prorated.toFixed(decimals)}</td>
+        <td class="number ${discount/m.amount>0.5?'high-discount':''}">₹${discount.toFixed(decimals)}</td>`;
+        out.appendChild(tr);
+    });
+
+    tOriginal.textContent='₹'+totalOriginal.toFixed(3);
+    tProrated.textContent='₹'+sumProrated.toFixed(decimals);
+    tDiscount.textContent='₹'+sumDiscount.toFixed(decimals);
+}
+
+function resetAll(){
+    items=[{id:1,name:'',amount:0}];
+    nextId=2;
+    totalBillInput.value='';
+    afterDiscountInput.value='';
+    decimalToggle.checked=false;
+    useCustomDecimals=false;
+    decimalSelector.classList.remove('active');
+    decimalSelector.value='2';
+    decimalPlaces=2;
+    renderTable();
+}
+
+const totalBillInput=document.getElementById('totalBill');
+const afterDiscountInput=document.getElementById('afterDiscount');
+const decimalToggle=document.getElementById('decimalToggle');
+const decimalSelector=document.getElementById('decimalSelector');
+
+totalBillInput.addEventListener('input', calculate);
+afterDiscountInput.addEventListener('input', calculate);
+
+decimalToggle.addEventListener('change', (e)=>{
+    useCustomDecimals=e.target.checked;
+    decimalSelector.classList.toggle('active', useCustomDecimals);
+    calculate();
+});
+
+decimalSelector.addEventListener('change', (e)=>{
+    decimalPlaces=parseInt(e.target.value);
+    calculate();
+});
+
+items=[{id:1,name:'',amount:0}];
+nextId=2;
+renderTable();
+</script>
+
+</body>
+</html>
